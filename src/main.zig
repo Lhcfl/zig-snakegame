@@ -24,7 +24,7 @@ fn input_handler() anyerror!void {
         };
         if (snake.game_stoped()) {
             switch (key) {
-                'q' => {
+                'q', 'Q' => {
                     std.process.exit(0);
                 },
                 else => try snake.init(),
@@ -51,7 +51,7 @@ fn input_handler() anyerror!void {
                         snake.direction = .Right;
                     }
                 },
-                'q' => {
+                'q', 'Q' => {
                     std.process.exit(0);
                 },
                 else => {},
