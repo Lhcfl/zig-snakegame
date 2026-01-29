@@ -2,7 +2,6 @@ const std = @import("std");
 const snake = @import("snake.zig");
 const graph = @import("graph.zig");
 const builtin = @import("builtin");
-const MAX_TICK_PER_SECOND = 20;
 const vaxis = @import("vaxis");
 const Cell = vaxis.Cell;
 
@@ -14,8 +13,6 @@ const Event = union(enum) {
 pub const panic = vaxis.panic_handler;
 
 pub fn main() !void {
-    try snake.init();
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
     defer {
@@ -25,7 +22,11 @@ pub fn main() !void {
             std.log.err("memory leak", .{});
         }
     }
+
     const alloc = gpa.allocator();
+    const config = try @import("config.zig").parse_game_args(alloc);
+
+    try snake.init(config);
 
     var buffer: [1024]u8 = undefined;
     var tty = try vaxis.Tty.init(&buffer);
@@ -69,7 +70,7 @@ pub fn main() !void {
                     if (key.matches(vaxis.Key.left, .{})) snake.set_direction(.Left);
                     if (key.matches(vaxis.Key.right, .{})) snake.set_direction(.Right);
 
-                    if (key.matches('r', .{}) and snake.game_stoped()) try snake.init();
+                    if (key.matches('r', .{}) and snake.game_stoped()) try snake.init(config);
                 },
                 .winsize => |ws| try vx.resize(alloc, tty.writer(), ws),
             }
@@ -82,7 +83,7 @@ pub fn main() !void {
 
         const game_window = vaxis.widgets.alignment.center(win, snake.WORLD_W * 2 + 4, snake.WORLD_H + 4);
 
-        const game_window_main = game_window.child(.{ .x_off = 1, .y_off = 1 });
+        const game_window_main = game_window.child(.{ .x_off = 0, .y_off = 1 });
 
         _ = game_window_main.printSegment(.{
             .text = try graph.gen_world(),
@@ -98,8 +99,8 @@ pub fn main() !void {
             .style = .{ .fg = .{ .rgb = .{ 50, 255, 50 } } },
         }, .{});
 
-        const est_tick_per_second = (snake.score / 5) + 10;
-        const tick_per_second = if (est_tick_per_second < MAX_TICK_PER_SECOND) est_tick_per_second else MAX_TICK_PER_SECOND;
+        const est_tick_per_second = (snake.score / 8) + 10;
+        const tick_per_second = if (est_tick_per_second < config.max_tick_per_second) est_tick_per_second else config.max_tick_per_second;
 
         var speed_buf: [10]u8 = undefined;
         _ = game_window.printSegment(.{ .text = try std.fmt.bufPrint(&speed_buf, "speed = {d}", .{tick_per_second}) }, .{});

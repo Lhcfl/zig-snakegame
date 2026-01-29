@@ -25,16 +25,21 @@ pub fn gen_world() error{NoSpaceLeft}![]const u8 {
     // clear buffer
     world_buf.clear();
 
-    try world_buf.print("score = {d}, dir = {s}\n", .{ snake.score, snake.direction.to_string() });
+    try world_buf.print("score {d}\n", .{snake.score});
 
     for (&snake.world) |line| {
         for (&line) |block| {
-            try world_buf.print("{s}", .{block.render()});
+            try world_buf.print("{s}", .{switch (block) {
+                .SnakeBody => "()",
+                .Food => "<>",
+                .Edge => "██",
+                .Empty => "  ",
+            }});
         }
         try world_buf.print("\n", .{});
     }
 
-    try world_buf.print("Press Q to exit\n", .{});
+    try world_buf.print("Q Exit | ↑ ↓ ← → Move\n", .{});
 
     try switch (snake.game_status) {
         .Playing => world_buf.print("Use ↑ ↓ ← → to move\n", .{}),
