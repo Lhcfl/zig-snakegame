@@ -166,12 +166,12 @@ pub fn tick() !void {
             new_body[0].data = next_pos;
             snake.prepend(&new_body[0].node);
             world[next_pos.y][next_pos.x] = Block.SnakeBody;
+            generate_random_food();
             score += 1;
             if (cannot_generate_food()) {
                 game_status = .Win;
                 return;
             }
-            generate_random_food();
         },
         Block.Empty => {
             var head = find_snake_node(snake.pop().?);

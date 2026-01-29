@@ -39,12 +39,10 @@ pub fn gen_world() error{NoSpaceLeft}![]const u8 {
         try world_buf.print("\n", .{});
     }
 
-    try world_buf.print("Q Exit | ↑ ↓ ← → Move\n", .{});
-
     try switch (snake.game_status) {
-        .Playing => world_buf.print("Use ↑ ↓ ← → to move\n", .{}),
-        .Lost => world_buf.print("You Lost!! Press any key to restart\n", .{}),
-        .Win => world_buf.print("You Win!! Press any key to start a new game\n", .{}),
+        .Playing => world_buf.print("Q = Exit    ↑ ↓ ← → = Move\n", .{}),
+        .Lost => world_buf.print("You Lost!! Press R to restart\n", .{}),
+        .Win => world_buf.print("You Win!! Press R to start a new game\n", .{}),
     };
 
     return &world_buf.buf;
