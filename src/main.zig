@@ -48,9 +48,6 @@ pub fn main() !void {
     try vx.queryColor(tty.writer(), .fg);
     try vx.queryColor(tty.writer(), .bg);
 
-    const fg = [_]u8{ 192, 202, 245 };
-    const bg = [_]u8{ 26, 27, 38 };
-
     var frame: u32 = 0;
 
     // block until we get a resize
@@ -89,20 +86,10 @@ pub fn main() !void {
         const win = vx.window();
         win.clear();
 
-        const color = try blendColors(bg, fg, 100);
-
-        const style: vaxis.Style = .{ .fg = color };
-
-        // const segment: vaxis.Segment = .{
-        //     .text = try graph.gen_world(),
-        //     .style = style,
-        // };
-
         const game_window = vaxis.widgets.alignment.center(win, snake.WORLD_W * 2 + 4, snake.WORLD_H + 4);
 
         _ = game_window.printSegment(.{
             .text = try graph.gen_world(),
-            .style = style,
         }, .{});
 
         const snake_window = game_window.child(.{
@@ -113,42 +100,10 @@ pub fn main() !void {
         _ = snake_window.printSegment(.{
             .text = try graph.gen_snake(),
             .style = .{ .fg = .{ .rgb = .{ 50, 255, 50 } } },
-        }, .{ .wrap = .grapheme });
-
-        // _ = vaxis.widgets.alignment.topLeft(win, snake.WORLD_W * 2 + 20, snake.WORLD_H + 10).printSegment(segment, .{ .wrap = .grapheme });
-
-        // _ = vaxis.widgets.alignment.topLeft(win, snake.WORLD_W * 2 + 20, snake.WORLD_H + 10)
-        //     .printSegment(.{
-        //     .text = try graph.gen_status(),
-        //     .style = style,
-        // }, .{ .wrap = .grapheme });
+        }, .{});
 
         try vx.render(tty.writer());
         std.Thread.sleep(16 * std.time.ns_per_ms);
         frame = (frame + 1) % 3;
     }
-}
-
-/// blend two rgb colors. pct is an integer percentage for te portion of 'b' in
-/// 'a'
-fn blendColors(a: [3]u8, b: [3]u8, pct: u8) !vaxis.Color {
-    // const r_a = (a[0] * (100 -| pct)) / 100;
-
-    const r_a = (@as(u16, a[0]) * @as(u16, (100 -| pct))) / 100;
-    const r_b = (@as(u16, b[0]) * @as(u16, pct)) / 100;
-
-    const g_a = (@as(u16, a[1]) * @as(u16, (100 -| pct))) / 100;
-    const g_b = (@as(u16, b[1]) * @as(u16, pct)) / 100;
-    // const g_a = try std.math.mul(u8, a[1], (100 -| pct) / 100);
-    // const g_b = (b[1] * pct) / 100;
-
-    const b_a = (@as(u16, a[2]) * @as(u16, (100 -| pct))) / 100;
-    const b_b = (@as(u16, b[2]) * @as(u16, pct)) / 100;
-    // const b_a = try std.math.mul(u8, a[2], (100 -| pct) / 100);
-    // const b_b = (b[2] * pct) / 100;
-    return .{ .rgb = [_]u8{
-        @min(r_a + r_b, 255),
-        @min(g_a + g_b, 255),
-        @min(b_a + b_b, 255),
-    } };
 }
