@@ -1,6 +1,7 @@
 const std = @import("std");
 const inputer = @import("inputer.zig");
 const snake = @import("snake.zig");
+const graph = @import("graph.zig");
 const builtin = @import("builtin");
 const io = @import("io.zig");
 const TickPerSeconds = 16;
@@ -92,15 +93,36 @@ pub fn main() !void {
 
         const style: vaxis.Style = .{ .fg = color };
 
-        const segment: vaxis.Segment = .{
-            .text = try snake.gen_world(),
+        // const segment: vaxis.Segment = .{
+        //     .text = try graph.gen_world(),
+        //     .style = style,
+        // };
+
+        const game_window = vaxis.widgets.alignment.center(win, snake.WORLD_W * 2 + 4, snake.WORLD_H + 4);
+
+        _ = game_window.printSegment(.{
+            .text = try graph.gen_world(),
             .style = style,
-        };
-        const center = vaxis.widgets.alignment.center(win, snake.WORLD_W * 2 + 20, snake.WORLD_H + 10);
-        _ = center.printSegment(segment, .{ .wrap = .grapheme });
-        // var bw = tty.bufferedWriter();
-        // try vx.render(bw.writer().any());
-        // try bw.flush();
+        }, .{});
+
+        const snake_window = game_window.child(.{
+            .x_off = 2,
+            .y_off = 1,
+        });
+
+        _ = snake_window.printSegment(.{
+            .text = try graph.gen_snake(),
+            .style = .{ .fg = .{ .rgb = .{ 50, 255, 50 } } },
+        }, .{ .wrap = .grapheme });
+
+        // _ = vaxis.widgets.alignment.topLeft(win, snake.WORLD_W * 2 + 20, snake.WORLD_H + 10).printSegment(segment, .{ .wrap = .grapheme });
+
+        // _ = vaxis.widgets.alignment.topLeft(win, snake.WORLD_W * 2 + 20, snake.WORLD_H + 10)
+        //     .printSegment(.{
+        //     .text = try graph.gen_status(),
+        //     .style = style,
+        // }, .{ .wrap = .grapheme });
+
         try vx.render(tty.writer());
         std.Thread.sleep(16 * std.time.ns_per_ms);
         frame = (frame + 1) % 3;
