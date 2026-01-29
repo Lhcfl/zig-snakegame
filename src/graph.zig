@@ -72,8 +72,8 @@ pub fn gen_status() ![]const u8 {
 
     try switch (snake.game_status) {
         .Playing => status_buf.print("Use ↑ ↓ ← → to move\n", .{}),
-        .Lost => status_buf.print("You Lost!! Press any key to restart\n", .{}),
-        .Win => status_buf.print("You Win!! Press any key to start a new game\n", .{}),
+        .Lost => status_buf.print("You Lost!! Press R to restart\n", .{}),
+        .Win => status_buf.print("You Win!! Press R to start a new game\n", .{}),
     };
 
     return &status_buf.buf;
