@@ -55,12 +55,12 @@ pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
         }
     }
 
-    validate(&ret);
+    validate(ret);
 
     return ret;
 }
 
-fn validate(config: *GameConfig) void {
+fn validate(config: GameConfig) void {
     if (config.size > 100 or config.size < 8) {
         std.log.err("size must be >= 8 and <= 100", .{});
         std.process.exit(1);
