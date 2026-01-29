@@ -104,10 +104,12 @@ pub fn main() !void {
             .y_off = 1,
         });
 
-        _ = snake_window.printSegment(.{
-            .text = try view.gen_snake(&stb),
-            .style = .{ .fg = .{ .rgb = .{ 50, 255, 50 } } },
-        }, .{});
+        if (!config.basic) {
+            _ = snake_window.printSegment(.{
+                .text = try view.gen_snake(&stb),
+                .style = .{ .fg = .{ .rgb = .{ 50, 255, 50 } } },
+            }, .{});
+        }
 
         const est_tick_per_second = (game.score / 8) + 10;
         const tick_per_second = if (est_tick_per_second < config.max_tick_per_second) est_tick_per_second else config.max_tick_per_second;

@@ -6,6 +6,7 @@ max_tick_per_second: usize = 25,
 food: usize = 3,
 allocator: std.mem.Allocator,
 size: usize = 20,
+basic: bool = false,
 
 pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
     var args = try std.process.argsWithAllocator(alloc);
@@ -15,43 +16,59 @@ pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
         .allocator = alloc,
     };
 
-    const ParsingStatus = enum {
-        Nothing,
-        Speed,
-        Food,
-        Size,
-    };
-
-    var status: ParsingStatus = .Nothing;
-
     while (args.next()) |it| {
         const arg: []const u8 = it[0..];
-        switch (status) {
-            .Nothing => {
-                if (std.mem.startsWith(u8, arg, "--max-speed")) {
-                    status = .Speed;
-                }
-                if (std.mem.startsWith(u8, arg, "--food")) {
-                    status = .Food;
-                }
-                if (std.mem.startsWith(u8, arg, "--size")) {
-                    status = .Size;
-                }
-                continue;
-            },
-            .Speed => {
-                ret.max_tick_per_second = try std.fmt.parseInt(usize, arg, 10);
-            },
-            .Food => {
-                ret.food = try std.fmt.parseInt(usize, arg, 10);
-            },
-            .Size => {
-                ret.size = try std.fmt.parseInt(usize, arg, 10);
-            },
+        if (std.mem.startsWith(u8, arg, "--max-speed")) {
+            ret.max_tick_per_second = std.fmt.parseInt(usize, args.next().?, 10) catch |e| {
+                std.log.err("invalid max-speed: {}", .{e});
+                std.process.exit(1);
+            };
+        } else if (std.mem.startsWith(u8, arg, "--food")) {
+            ret.food = std.fmt.parseInt(usize, args.next().?, 10) catch |e| {
+                std.log.err("invalid food count: {}", .{e});
+                std.process.exit(1);
+            };
+        } else if (std.mem.startsWith(u8, arg, "--size")) {
+            ret.size = std.fmt.parseInt(usize, args.next().?, 10) catch |e| {
+                std.log.err("invalid size: {}", .{e});
+                std.process.exit(1);
+            };
+        } else if (std.mem.startsWith(u8, arg, "--basic")) {
+            ret.basic = true;
+        } else if (std.mem.startsWith(u8, arg, "--help") or std.mem.startsWith(u8, arg, "-h") or std.mem.startsWith(u8, arg, "/?")) {
+            const stdout = std.fs.File.stdout();
+            try stdout.writeAll(HELP_MESSAGE);
+            stdout.close();
+            std.process.exit(0);
         }
-
-        status = .Nothing;
     }
+
+    validate(&ret);
 
     return ret;
 }
+
+fn validate(config: *GameConfig) void {
+    if (config.size > 100 or config.size < 8) {
+        std.log.err("size must be >= 8 and <= 100", .{});
+        std.process.exit(1);
+    }
+    if (config.food < 1 or config.food > (config.size - 2) * (config.size - 2) - 5) {
+        std.log.err("food count is too big or too small", .{});
+        std.process.exit(1);
+    }
+    if (config.max_tick_per_second < 1 or config.max_tick_per_second > 100) {
+        std.log.err("max tick per second must be >= 1 and <= 100", .{});
+        std.process.exit(1);
+    }
+}
+
+pub const HELP_MESSAGE =
+    \\Snake Game! powered by Zig and Vaxis
+    \\Usage:
+    \\  --max-speed <number>   Set the maximum speed (ticks per second). Default is 25.
+    \\  --food <number>        Set the number of food items in the game. Default is 3.
+    \\  --size <number>        Set the size of the game world (width and height). Default is 20.
+    \\  --basic                Enable basic mode (no color and simplified rendering).
+    \\Enjoy the game!
+;
