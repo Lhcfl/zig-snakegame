@@ -1,9 +1,10 @@
 const std = @import("std");
-const snake = @import("snake.zig");
-const graph = @import("graph.zig");
+const Game = @import("snake.zig");
+const View = @import("view.zig");
 const builtin = @import("builtin");
 const vaxis = @import("vaxis");
 const Cell = vaxis.Cell;
+const TextBuffer = @import("text-buffer.zig");
 
 const Event = union(enum) {
     key_press: vaxis.Key,
@@ -23,17 +24,26 @@ pub fn main() !void {
         }
     }
 
-    const alloc = gpa.allocator();
-    const config = try @import("config.zig").parse_game_args(alloc);
+    const allocator = gpa.allocator();
+    const config = try @import("config.zig").parse_game_args(allocator);
 
-    try snake.init(config);
+    var game = Game{};
+    try game.init(config);
+    defer game.deinit();
+
+    const view = View{ .game = &game };
+
+    var tb = try TextBuffer.init(view.view_size() * view.view_size(), allocator);
+    defer tb.deinit(allocator);
+    var stb = try TextBuffer.init(view.view_size() * view.view_size(), allocator);
+    defer stb.deinit(allocator);
 
     var buffer: [1024]u8 = undefined;
     var tty = try vaxis.Tty.init(&buffer);
     defer tty.deinit();
 
-    var vx = try vaxis.init(alloc, .{});
-    defer vx.deinit(alloc, tty.writer());
+    var vx = try vaxis.init(allocator, .{});
+    defer vx.deinit(allocator, tty.writer());
 
     var loop: vaxis.Loop(Event) = .{ .tty = &tty, .vaxis = &vx };
     try loop.init();
@@ -53,7 +63,7 @@ pub fn main() !void {
         switch (event) {
             .key_press => |key| if (key.matches('c', .{ .ctrl = true })) return,
             .winsize => |ws| {
-                try vx.resize(alloc, tty.writer(), ws);
+                try vx.resize(allocator, tty.writer(), ws);
                 break;
             },
         }
@@ -65,28 +75,28 @@ pub fn main() !void {
                 .key_press => |key| {
                     if (key.matches('c', .{ .ctrl = true })) return;
                     if (key.matches('q', .{})) return;
-                    if (key.matches(vaxis.Key.up, .{})) snake.set_direction(.Up);
-                    if (key.matches(vaxis.Key.down, .{})) snake.set_direction(.Down);
-                    if (key.matches(vaxis.Key.left, .{})) snake.set_direction(.Left);
-                    if (key.matches(vaxis.Key.right, .{})) snake.set_direction(.Right);
+                    if (key.matches(vaxis.Key.up, .{})) game.set_direction(.Up);
+                    if (key.matches(vaxis.Key.down, .{})) game.set_direction(.Down);
+                    if (key.matches(vaxis.Key.left, .{})) game.set_direction(.Left);
+                    if (key.matches(vaxis.Key.right, .{})) game.set_direction(.Right);
 
-                    if (key.matches('r', .{}) and snake.game_stoped()) try snake.init(config);
+                    if (key.matches('r', .{}) and game.game_stoped()) try game.init(config);
                 },
-                .winsize => |ws| try vx.resize(alloc, tty.writer(), ws),
+                .winsize => |ws| try vx.resize(allocator, tty.writer(), ws),
             }
         }
 
-        try snake.tick();
+        try game.tick();
 
         const win = vx.window();
         win.clear();
 
-        const game_window = vaxis.widgets.alignment.center(win, snake.WORLD_W * 2 + 4, snake.WORLD_H + 4);
+        const game_window = vaxis.widgets.alignment.center(win, view.view_size(), view.view_size());
 
         const game_window_main = game_window.child(.{ .x_off = 0, .y_off = 1 });
 
         _ = game_window_main.printSegment(.{
-            .text = try graph.gen_world(),
+            .text = try view.gen_world(&tb),
         }, .{});
 
         const snake_window = game_window_main.child(.{
@@ -95,11 +105,11 @@ pub fn main() !void {
         });
 
         _ = snake_window.printSegment(.{
-            .text = try graph.gen_snake(),
+            .text = try view.gen_snake(&stb),
             .style = .{ .fg = .{ .rgb = .{ 50, 255, 50 } } },
         }, .{});
 
-        const est_tick_per_second = (snake.score / 8) + 10;
+        const est_tick_per_second = (game.score / 8) + 10;
         const tick_per_second = if (est_tick_per_second < config.max_tick_per_second) est_tick_per_second else config.max_tick_per_second;
 
         var speed_buf: [10]u8 = undefined;
