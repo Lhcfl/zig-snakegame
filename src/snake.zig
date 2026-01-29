@@ -1,10 +1,9 @@
 /// 世界宽度
-const WORLD_W = 20;
+pub const WORLD_W = 20;
 /// 世界高度
-const WORLD_H = 20;
+pub const WORLD_H = 20;
 
 const std = @import("std");
-const io = @import("io.zig");
 const systemTag = @import("builtin").os.tag;
 
 const GameStatus = enum {
@@ -12,7 +11,7 @@ const GameStatus = enum {
     Lost,
     Win,
 
-    pub inline fn toString(self: GameStatus) []const u8 {
+    pub inline fn to_string(self: GameStatus) []const u8 {
         return switch (self) {
             .Playing => "",
             .Lost => "You Lost!!",
@@ -27,7 +26,7 @@ const Block = enum(u8) {
     Food,
     SnakeBody,
 
-    pub inline fn toString(self: Block) []const u8 {
+    pub inline fn to_string(self: Block) []const u8 {
         return switch (self) {
             .Empty => "  ",
             .Edge => "##",
@@ -43,7 +42,7 @@ pub const Direction = enum {
     Left,
     Right,
 
-    pub inline fn toString(self: Direction) []const u8 {
+    pub inline fn to_string(self: Direction) []const u8 {
         if (systemTag == .linux) {
             return switch (self) {
                 .Up => "Up",
@@ -62,16 +61,29 @@ pub const Direction = enum {
     }
 };
 
+pub fn set_direction(new_dir: Direction) void {
+    switch (direction) {
+        .Up => if (new_dir == .Down) return,
+        .Down => if (new_dir == .Up) return,
+        .Left => if (new_dir == .Right) return,
+        .Right => if (new_dir == .Left) return,
+    }
+    direction = new_dir;
+}
+
 const Pos = struct {
     x: u8,
     y: u8,
 };
 
-const SnakeNode = std.TailQueue(Pos).Node;
+const SnakeNode = struct {
+    data: Pos,
+    node: std.DoublyLinkedList.Node,
+};
 
 var world: [WORLD_H][WORLD_W]Block = undefined;
 var game_status = GameStatus.Playing;
-var snake = std.TailQueue(Pos){};
+var snake = std.DoublyLinkedList{ .first = null, .last = null };
 var snake_buffer: [WORLD_H * WORLD_W * @sizeOf(SnakeNode)]u8 = undefined;
 var snake_allocator_main = std.heap.FixedBufferAllocator.init(&snake_buffer);
 var snake_allocator = snake_allocator_main.allocator();
@@ -96,8 +108,8 @@ pub fn init() anyerror!void {
         }
     }
 
-    while (snake.len > 0) {
-        snake_allocator.destroy(snake.pop().?);
+    while (snake.first != null) {
+        snake_allocator.destroy(find_snake_node(snake.pop().?));
     }
 
     var init_snakes = try snake_allocator.alloc(SnakeNode, 5);
@@ -108,7 +120,7 @@ pub fn init() anyerror!void {
             .y = WORLD_H / 2,
         };
         init_snakes[i].data = pos;
-        snake.append(&init_snakes[i]);
+        snake.append(&init_snakes[i].node);
         world[pos.y][pos.x] = Block.SnakeBody;
     }
 
@@ -119,8 +131,8 @@ pub fn init() anyerror!void {
 
 fn generate_random_food() void {
     while (true) {
-        const x = std.rand.intRangeAtMost(rng, u8, 1, WORLD_W - 2);
-        const y = std.rand.intRangeAtMost(rng, u8, 1, WORLD_H - 2);
+        const x = std.Random.intRangeAtMost(rng, u8, 1, WORLD_W - 2);
+        const y = std.Random.intRangeAtMost(rng, u8, 1, WORLD_H - 2);
 
         if (world[y][x] == Block.Empty) {
             world[y][x] = Block.Food;
@@ -129,12 +141,16 @@ fn generate_random_food() void {
     }
 }
 
+fn find_snake_node(node: *std.DoublyLinkedList.Node) *SnakeNode {
+    return @as(*SnakeNode, @fieldParentPtr("node", node));
+}
+
 pub fn tick() anyerror!void {
     if (game_stoped()) {
         return;
     }
 
-    var next_pos = snake.first.?.data;
+    var next_pos = find_snake_node(snake.first.?).data;
     switch (direction) {
         Direction.Left => next_pos.x -= 1,
         Direction.Right => next_pos.x += 1,
@@ -148,41 +164,48 @@ pub fn tick() anyerror!void {
         Block.Food => {
             var new_body = try snake_allocator.alloc(SnakeNode, 1);
             new_body[0].data = next_pos;
-            snake.prepend(&new_body[0]);
+            snake.prepend(&new_body[0].node);
             world[next_pos.y][next_pos.x] = Block.SnakeBody;
             generate_random_food();
         },
         Block.Empty => {
-            var head = snake.pop().?;
+            var head = find_snake_node(snake.pop().?);
             world[head.data.y][head.data.x] = Block.Empty;
             head.data = next_pos;
-            snake.prepend(head);
+            snake.prepend(&head.node);
             world[next_pos.y][next_pos.x] = Block.SnakeBody;
         },
     }
 }
 
-pub fn printWorld() void {
-    var buffer: [20]u8 = undefined;
-    // 回到左上角
-    io.moveTo00();
-    io.output("Snake Game! Score: ");
-    const score = std.fmt.bufPrint(&buffer, "{d}", .{snake.len - 5}) catch "0";
-    io.output(score);
-    io.output("\nDirection: ");
-    io.output(direction.toString());
-    io.output("\n");
-    io.output(game_status.toString());
-    io.output("\n");
+var text_buf: [2 * WORLD_H * WORLD_W + 1024]u8 = undefined;
+var text_idx: usize = 0;
+
+fn print(comptime fmt: []const u8, args: anytype) !void {
+    const buf = try std.fmt.bufPrint(text_buf[text_idx..], fmt, args);
+    text_idx += buf.len;
+}
+
+pub fn gen_world() error{NoSpaceLeft}![]const u8 {
+    text_buf = .{0} ** text_buf.len;
+    text_idx = 0;
+
+    try print("score = {d}, dir = {s}\n", .{ snake.len() - 5, direction.to_string() });
+
     for (&world) |line| {
         for (&line) |block| {
-            io.output(block.toString());
+            try print("{s}", .{block.to_string()});
         }
-        io.output("\n");
+        try print("\n", .{});
     }
+
+    try print("Press Q to exit\n", .{});
+
     if (game_stoped()) {
-        io.output("Press any key to reset. ");
+        try print("{s} Press any key to restart\n", .{game_status.to_string()});
+    } else {
+        try print("Use ↑ ↓ ← → to move\n", .{});
     }
-    io.output("Press Q to quit.\n");
-    io.refresh();
+
+    return &text_buf;
 }
