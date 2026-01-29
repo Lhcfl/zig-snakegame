@@ -19,17 +19,29 @@ pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
     while (args.next()) |it| {
         const arg: []const u8 = it[0..];
         if (std.mem.startsWith(u8, arg, "--max-speed")) {
-            ret.max_tick_per_second = std.fmt.parseInt(usize, args.next().?, 10) catch |e| {
+            const next = if (args.next()) |val| val else {
+                std.log.err("missing value for --max-speed", .{});
+                std.process.exit(1);
+            };
+            ret.max_tick_per_second = std.fmt.parseInt(usize, next, 10) catch |e| {
                 std.log.err("invalid max-speed: {}", .{e});
                 std.process.exit(1);
             };
         } else if (std.mem.startsWith(u8, arg, "--food")) {
-            ret.food = std.fmt.parseInt(usize, args.next().?, 10) catch |e| {
+            const next = if (args.next()) |val| val else {
+                std.log.err("missing value for --food", .{});
+                std.process.exit(1);
+            };
+            ret.food = std.fmt.parseInt(usize, next, 10) catch |e| {
                 std.log.err("invalid food count: {}", .{e});
                 std.process.exit(1);
             };
         } else if (std.mem.startsWith(u8, arg, "--size")) {
-            ret.size = std.fmt.parseInt(usize, args.next().?, 10) catch |e| {
+            const next = if (args.next()) |val| val else {
+                std.log.err("missing value for --size", .{});
+                std.process.exit(1);
+            };
+            ret.size = std.fmt.parseInt(usize, next, 10) catch |e| {
                 std.log.err("invalid size: {}", .{e});
                 std.process.exit(1);
             };
