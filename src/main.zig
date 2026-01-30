@@ -143,7 +143,7 @@ pub fn main() !void {
         }
 
         const est_tick_per_second = (game.score / 8) + 10;
-        const tick_per_second = if (est_tick_per_second < config.max_tick_per_second) est_tick_per_second else config.max_tick_per_second;
+        const tick_per_second = if (config.auto) config.max_tick_per_second else if (est_tick_per_second < config.max_tick_per_second) est_tick_per_second else config.max_tick_per_second;
 
         var speed_buf: [10]u8 = undefined;
         _ = game_window.printSegment(.{ .text = try std.fmt.bufPrint(&speed_buf, "speed = {d}", .{tick_per_second}) }, .{});
