@@ -79,8 +79,8 @@ fn validate(config: GameConfig) void {
         std.log.err("food count is too big or too small", .{});
         std.process.exit(1);
     }
-    if (config.max_tick_per_second < 1 or config.max_tick_per_second > 100) {
-        std.log.err("max tick per second must be >= 1 and <= 100", .{});
+    if (config.max_tick_per_second < 1 or config.max_tick_per_second > 160) {
+        std.log.err("max tick per second must be >= 1 and <= 160", .{});
         std.process.exit(1);
     }
     if (config.auto) |auto_id| {
