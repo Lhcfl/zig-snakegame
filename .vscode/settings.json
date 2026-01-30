@@ -1,3 +1,9 @@
 {
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "chat.tools.terminal.autoApprove": {
+    "/^zig build$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
 }

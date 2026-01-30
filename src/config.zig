@@ -7,6 +7,7 @@ food: usize = 3,
 allocator: std.mem.Allocator,
 size: usize = 20,
 basic: bool = false,
+auto: bool = false,
 
 pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
     var args = try std.process.argsWithAllocator(alloc);
@@ -47,6 +48,8 @@ pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
             };
         } else if (std.mem.startsWith(u8, arg, "--basic")) {
             ret.basic = true;
+        } else if (std.mem.startsWith(u8, arg, "--auto")) {
+            ret.auto = true;
         } else if (std.mem.startsWith(u8, arg, "--help") or std.mem.startsWith(u8, arg, "-h") or std.mem.startsWith(u8, arg, "/?")) {
             const stdout = std.fs.File.stdout();
             try stdout.writeAll(HELP_MESSAGE);
@@ -82,5 +85,6 @@ pub const HELP_MESSAGE =
     \\  --food <number>        Set the number of food items in the game. Default is 3.
     \\  --size <number>        Set the size of the game world (width and height). Default is 20.
     \\  --basic                Enable basic mode (no color and simplified rendering).
+    \\  --auto                 Enable automatic control (AI plays the game).
     \\Enjoy the game!
 ;

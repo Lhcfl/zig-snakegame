@@ -5,6 +5,7 @@ const builtin = @import("builtin");
 const vaxis = @import("vaxis");
 const Cell = vaxis.Cell;
 const TextBuffer = @import("text-buffer.zig");
+const auto_control = @import("auto_control.zig").auto_control;
 
 const Event = union(enum) {
     key_press: vaxis.Key,
@@ -86,6 +87,9 @@ pub fn main() !void {
             }
         }
 
+        if (config.auto) {
+            auto_control(&game);
+        }
         try game.tick();
 
         const win = vx.window();
