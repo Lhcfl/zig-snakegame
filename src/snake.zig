@@ -145,6 +145,39 @@ fn generate_random_food(self: *Game) void {
         return;
     }
 
+    const total_space = (self.world_w - 2) * (self.world_h - 2);
+    const threshold = total_space / 20; // 5%
+
+    // 计算空位数量：总空间 - 蛇身长度 - 食物数量
+    const snake_length = LENGTH_INIT + self.score;
+    const empty_count = total_space - snake_length - self.food_count;
+
+    // 空位较少时，遍历收集所有空位并随机选择
+    if (empty_count < threshold and empty_count > 0) {
+        var empty_positions = self.allocator.alloc(Pos, empty_count) catch {
+            // 分配失败，直接返回
+            return;
+        };
+        defer self.allocator.free(empty_positions);
+
+        var idx: usize = 0;
+        for (0..self.world_h) |y| {
+            for (0..self.world_w) |x| {
+                const pos = Pos{ .x = x, .y = y };
+                if (self.world[self.indexOf(pos)] == Block.Empty) {
+                    empty_positions[idx] = pos;
+                    idx += 1;
+                }
+            }
+        }
+
+        const selected = std.Random.intRangeAtMost(self.rng, usize, 0, empty_count - 1);
+        const food_pos = empty_positions[selected];
+        self.world[self.indexOf(food_pos)] = Block.Food;
+        return;
+    }
+
+    // 空位充足时，直接随机
     while (true) {
         const x = std.Random.intRangeAtMost(self.rng, usize, 1, self.world_w - 2);
         const y = std.Random.intRangeAtMost(self.rng, usize, 1, self.world_h - 2);
