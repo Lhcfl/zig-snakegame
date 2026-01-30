@@ -7,7 +7,7 @@ food: usize = 3,
 allocator: std.mem.Allocator,
 size: usize = 20,
 basic: bool = false,
-auto: bool = false,
+auto: ?u8 = null,
 
 pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
     var args = try std.process.argsWithAllocator(alloc);
@@ -49,7 +49,14 @@ pub fn parse_game_args(alloc: std.mem.Allocator) !GameConfig {
         } else if (std.mem.startsWith(u8, arg, "--basic")) {
             ret.basic = true;
         } else if (std.mem.startsWith(u8, arg, "--auto")) {
-            ret.auto = true;
+            const next = if (args.next()) |val| val else {
+                std.log.err("missing value for --auto", .{});
+                std.process.exit(1);
+            };
+            ret.auto = std.fmt.parseInt(u8, next, 10) catch |e| {
+                std.log.err("invalid auto id: {}", .{e});
+                std.process.exit(1);
+            };
         } else if (std.mem.startsWith(u8, arg, "--help") or std.mem.startsWith(u8, arg, "-h") or std.mem.startsWith(u8, arg, "/?")) {
             const stdout = std.fs.File.stdout();
             try stdout.writeAll(HELP_MESSAGE);
@@ -76,6 +83,12 @@ fn validate(config: GameConfig) void {
         std.log.err("max tick per second must be >= 1 and <= 100", .{});
         std.process.exit(1);
     }
+    if (config.auto) |auto_id| {
+        if (auto_id > 1) {
+            std.log.err("auto id must be 0 (simp) or 1 (bfs)", .{});
+            std.process.exit(1);
+        }
+    }
 }
 
 pub const HELP_MESSAGE =
@@ -85,6 +98,6 @@ pub const HELP_MESSAGE =
     \\  --food <number>        Set the number of food items in the game. Default is 3.
     \\  --size <number>        Set the size of the game world (width and height). Default is 20.
     \\  --basic                Enable basic mode (no color and simplified rendering).
-    \\  --auto                 Enable automatic control (AI plays the game).
+    \\  --auto <id>            Enable automatic control: 0=simp, 1=bfs.
     \\Enjoy the game!
 ;

@@ -6,6 +6,7 @@ const vaxis = @import("vaxis");
 const Cell = vaxis.Cell;
 const TextBuffer = @import("text-buffer.zig");
 const auto_control = @import("auto_control.zig").auto_control;
+const simp_auto_control = @import("simp_auto_control.zig").simp_auto_control;
 
 const Event = union(enum) {
     key_press: vaxis.Key,
@@ -87,8 +88,12 @@ pub fn main() !void {
             }
         }
 
-        if (config.auto) {
-            auto_control(&game);
+        if (config.auto) |auto_id| {
+            if (auto_id == 0) {
+                simp_auto_control(&game);
+            } else {
+                auto_control(&game);
+            }
         }
         try game.tick();
 
@@ -143,7 +148,7 @@ pub fn main() !void {
         }
 
         const est_tick_per_second = (game.score / 8) + 10;
-        const tick_per_second = if (config.auto) config.max_tick_per_second else if (est_tick_per_second < config.max_tick_per_second) est_tick_per_second else config.max_tick_per_second;
+        const tick_per_second = if (config.auto != null) config.max_tick_per_second else if (est_tick_per_second < config.max_tick_per_second) est_tick_per_second else config.max_tick_per_second;
 
         var speed_buf: [10]u8 = undefined;
         _ = game_window.printSegment(.{ .text = try std.fmt.bufPrint(&speed_buf, "speed = {d}", .{tick_per_second}) }, .{});

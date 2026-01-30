@@ -187,7 +187,7 @@ pub fn tick(self: *Game) !void {
             self.world[self.indexOf(next_pos)] = Block.SnakeBody;
             self.generate_random_food();
             self.score += 1;
-            if (self.cannot_generate_food()) {
+            if (self.score >= (self.world_w - 2) * (self.world_h - 2) - LENGTH_INIT) {
                 self.game_status = .Win;
                 return;
             }
