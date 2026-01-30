@@ -75,7 +75,7 @@ score: u32 = 0,
 allocator: std.mem.Allocator = undefined,
 first_inited: bool = false,
 
-const LENGTH_INIT = 5;
+pub const LENGTH_INIT = 5;
 
 pub fn game_stoped(self: *Game) bool {
     return self.game_status != .Playing;
@@ -158,6 +158,10 @@ fn generate_random_food(self: *Game) void {
 
 fn find_snake_node(node: *std.DoublyLinkedList.Node) *SnakeNode {
     return @as(*SnakeNode, @fieldParentPtr("node", node));
+}
+
+pub fn data_of(node: *std.DoublyLinkedList.Node) Pos {
+    return find_snake_node(node).data;
 }
 
 pub fn tick(self: *Game) !void {

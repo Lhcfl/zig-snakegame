@@ -9,7 +9,7 @@ pub fn view_size(self: *const View) u16 {
     return @intCast(self.game.world_w * 2 + 4);
 }
 
-pub fn gen_world(self: *const View, buf: *TextBuffer) ![]const u8 {
+pub fn gen_world(self: *const View, buf: *TextBuffer, is_basic: bool) ![]const u8 {
     // clear buffer
     buf.clear();
 
@@ -19,7 +19,7 @@ pub fn gen_world(self: *const View, buf: *TextBuffer) ![]const u8 {
         for (0..self.game.world_w) |x| {
             try buf.print("{s}", .{switch (self.game.world[self.game.indexOf(.{ .x = x, .y = y })]) {
                 .SnakeBody => "()",
-                .Food => "<>",
+                .Food => if (is_basic) "<>" else "💖",
                 .Edge => "██",
                 .Empty => "  ",
             }});

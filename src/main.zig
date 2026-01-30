@@ -96,7 +96,7 @@ pub fn main() !void {
         const game_window_main = game_window.child(.{ .x_off = 0, .y_off = 1 });
 
         _ = game_window_main.printSegment(.{
-            .text = try view.gen_world(&tb),
+            .text = try view.gen_world(&tb, config.basic),
         }, .{});
 
         const snake_window = game_window_main.child(.{
@@ -104,11 +104,38 @@ pub fn main() !void {
             .y_off = 1,
         });
 
+        // colorful snake
         if (!config.basic) {
-            _ = snake_window.printSegment(.{
-                .text = try view.gen_snake(&stb),
-                .style = .{ .fg = .{ .rgb = .{ 50, 255, 50 } } },
-            }, .{});
+            var curr = game.snake.first;
+            var i: usize = 0;
+
+            const colors = [_][3]u8{
+                //    R    G  B
+                .{ 50, 255, 50 }, // 绿色
+                .{ 0, 255, 255 }, // 蓝色
+                .{ 50, 0, 255 }, // 靛色
+                .{ 255, 0, 255 }, // 紫色
+                .{ 255, 50, 0 }, // 红色
+                .{ 255, 165, 0 }, // 橙色
+                .{ 255, 255, 0 }, // 黄色
+            };
+
+            const segment = 50;
+
+            while (curr) |node| : ({
+                i += 1;
+                curr = node.next;
+            }) {
+                const idx = (i / segment) % colors.len;
+                const rem: u8 = @intCast((i % segment) * 100 / segment);
+
+                const color = blendColors(colors[idx], colors[(idx + 1) % colors.len], rem) catch colors[colors.len - 1];
+
+                _ = snake_window.printSegment(.{ .text = "██", .style = .{ .fg = color } }, .{
+                    .col_offset = @intCast((Game.data_of(node).x - 1) * 2),
+                    .row_offset = @intCast(Game.data_of(node).y),
+                });
+            }
         }
 
         const est_tick_per_second = (game.score / 8) + 10;
@@ -121,4 +148,28 @@ pub fn main() !void {
 
         std.Thread.sleep(std.time.ns_per_s / tick_per_second);
     }
+}
+
+/// blend two rgb colors. pct is an integer percentage for te portion of 'b' in
+/// 'a'
+fn blendColors(a: [3]u8, b: [3]u8, pct: u8) !vaxis.Color {
+    // const r_a = (a[0] * (100 -| pct)) / 100;
+
+    const r_a = (@as(u16, a[0]) * @as(u16, (100 -| pct))) / 100;
+    const r_b = (@as(u16, b[0]) * @as(u16, pct)) / 100;
+
+    const g_a = (@as(u16, a[1]) * @as(u16, (100 -| pct))) / 100;
+    const g_b = (@as(u16, b[1]) * @as(u16, pct)) / 100;
+    // const g_a = try std.math.mul(u8, a[1], (100 -| pct) / 100);
+    // const g_b = (b[1] * pct) / 100;
+
+    const b_a = (@as(u16, a[2]) * @as(u16, (100 -| pct))) / 100;
+    const b_b = (@as(u16, b[2]) * @as(u16, pct)) / 100;
+    // const b_a = try std.math.mul(u8, a[2], (100 -| pct) / 100);
+    // const b_b = (b[2] * pct) / 100;
+    return .{ .rgb = [_]u8{
+        @min(r_a + r_b, 255),
+        @min(g_a + g_b, 255),
+        @min(b_a + b_b, 255),
+    } };
 }
